@@ -12,9 +12,9 @@ This project has two components:
 To get started:
 * Install the package: `pip install wandb-offline-sync`
 * Generate a SSL certificate for the sync farm. You can use the command: `openssl req -newkey rsa:4096 -nodes -keyout key.pem -x509 -days 365 -out cert.pem`
-* Run `export SYNC_FARM_USERNAME=<your_username>; export SYNC_FARM_PASSWORD=<your_password>` to set the username and password for the sync farm. You can also put these commands in your `.bashrc` file. Replace `<your_username>` and `<your_password>` with your credentials. If these variables are not set, the farm will use the default credentials `("user", "pass")`
+* Run `export WANDB_SYNC_FARM_USERNAME=<your_username>; export WANDB_SYNC_FARM_PASSWORD=<your_password>` to set the username and password for the sync farm. You can also put these commands in your `.bashrc` file. Replace `<your_username>` and `<your_password>` with your credentials. If these variables are not set, the farm will use the default credentials `("user", "pass")`
 * Run the farm with the command `wandb_sync_farm` in a node with internet connection. After that, the farm will listen for sync requests. Run `wandb_sync_farm --help` to see all the available options.
-* Run `export SYNC_FARM_HOST=<sync_farm_ip_address_or_hostname>; export SYNC_FARM_PORT=<sync_farm_port>` to set the hostname and port of the sync farm. You can also put these commands in your `.bashrc` file. These variables will be used by the agent.
+* Run `export WANDB_SYNC_FARM_HOST=<sync_farm_ip_address_or_hostname>; export WANDB_SYNC_FARM_PORT=<sync_farm_port>` to set the hostname and port of the sync farm. You can also put these commands in your `.bashrc` file. These variables will be used by the agent.
 
 Then, in the code of your job, to use the agent:
 * import the agent: `from wandb_offline_sync import agent`

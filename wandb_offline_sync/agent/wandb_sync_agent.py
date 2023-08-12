@@ -7,8 +7,8 @@ requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.
 
 HOSTNAME = os.environ.get('SYNC_FARM_HOSTNAME', 'localhost')
 PORT = os.environ.get('SYNC_FARM_PORT', 57891)
-SYNC_FARM_USERNAME = os.environ.get('SYNC_FARM_USERNAME', 'user')
-SYNC_FARM_PASSWORD = os.environ.get('SYNC_FARM_PASSWORD', 'pass')
+WANDB_SYNC_FARM_USERNAME = os.environ.get('WANDB_SYNC_FARM_USERNAME', 'user')
+WANDB_SYNC_FARM_PASSWORD = os.environ.get('WANDB_SYNC_FARM_PASSWORD', 'pass')
 
 class SyncAgent:
     def __new__(cls):
@@ -46,7 +46,7 @@ class SyncAgent:
             if self.verbose:
                 print('SYNC FARM AGENT - Sending sync request')
             r = requests.post(f'https://{HOSTNAME}:{PORT}/sync', verify=False,
-                                auth=(SYNC_FARM_USERNAME, SYNC_FARM_PASSWORD),
+                                auth=(WANDB_SYNC_FARM_USERNAME, WANDB_SYNC_FARM_PASSWORD),
                                 data=self.data, timeout=self.timeout)
             return r
         except Exception as e:

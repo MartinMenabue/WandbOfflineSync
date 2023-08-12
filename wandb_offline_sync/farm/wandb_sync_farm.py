@@ -4,19 +4,20 @@ import os
 import subprocess
 import sys
 import argparse
+import base64
 
 app = Flask(__name__)
 
-SYNC_FARM_USERNAME = os.environ.get('SYNC_FARM_USERNAME', 'user')
-SYNC_FARM_PASSWORD = os.environ.get('SYNC_FARM_PASSWORD', 'pass')
+WANDB_SYNC_FARM_USERNAME = os.environ.get('WANDB_SYNC_FARM_USERNAME', 'user')
+WANDB_SYNC_FARM_PASSWORD = os.environ.get('WANDB_SYNC_FARM_PASSWORD', 'pass')
 
 def auth_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
-        if auth and auth.username == SYNC_FARM_USERNAME and auth.password == SYNC_FARM_PASSWORD:
+        if auth and auth.username == WANDB_SYNC_FARM_USERNAME and auth.password == WANDB_SYNC_FARM_PASSWORD:
             return f(*args, **kwargs)
-        return Response('Login!', 401, {'WWW-Authenticate': 'Basic realm="Login!"'})
+        return Response('Unauthorized\n', 401, {'WWW-Authenticate': 'Basic realm="Login!"'})
     return decorated
 
 @app.route("/")
@@ -26,7 +27,8 @@ def index():
 @app.route("/sync", methods=['POST'])
 @auth_required
 def sync():
-    print('Received sync request')
+    if globals()['verbose']:
+        print('Received sync request')
     wandb_run_id = request.form['run_id']
     wandb_run_dir = request.form['run_dir']
     wandb_run_dir = wandb_run_dir.removesuffix('/files')
@@ -42,9 +44,10 @@ def main():
     parser.add_argument('--key', type=str, default='key.pem', help='Path to SSL key')
     parser.add_argument('--verbose', action='store_true', help='Verbose mode')
     args = parser.parse_args()
-    global stderr, stdout
+    global stderr, stdout, verbose
     stdout = sys.stdout if args.verbose else None
     stderr = sys.stderr if args.verbose else None
+    verbose = args.verbose
     app.run(ssl_context=(args.cert, args.key), host=args.host, port=args.port)
 
 if __name__ == "__main__":
