@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wandb_offline_sync"
+version = "0.0.1"
+authors = [
+  { name="Martin Menabue", email="martinmnb@live.it" },
+]
+description = "Continuously sync offline wandb runs"
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+requires-python = ">=3.7"
+keywords = ["wandb", "offline", "sync"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "Flask",
+    "requests",
+    "wandb"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/MartinMenabue/WandbOfflineSync"
+"Bug Tracker" = "https://github.com/MartinMenabue/WandbOfflineSync/issues"
+
+[project.scripts]
+"wandb_sync_farm" = "wandb_offline_sync.farm.wandb_sync_farm:main"
+
+[tool.setuptools.packages.find]
+where = ["."]

@@ -4,19 +4,22 @@ Continuously sync offline wandb runs.
 ## Why?
 If you work on computing nodes without internet access, you can use wandb in offline mode to log your runs. Normally you would sync an offline run to wandb at the end of the run, but if you have a long running job, you may want to sync your run during job's execution.
 
-## How?
-Firstly, you need to setup the sync farm:
-* Install the requirements: `pip install -r requirements.txt`
-* Run the script `generate_cert.sh` and follow the steps to generate a certificate, which will be used to encrypt the communication between the sync farm and the agent.
-* Run `export SYNC_FARM_USERNAME=<your_username>; export SYNC_FARM_PASSWORD=<your_password>` to set the username and password for the sync farm. You can also put these commands in your `.bashrc` file.
-* Run the script `sync_farm.py` in a node with internet connection. It will setup a https server that listens for sync requests. Run `sync_farm.py --help` to see the available options.
-* Run `export SYNC_FARM_HOST=<sync_farm_host>; export SYNC_FARM_PORT=<sync_farm_port>` to set the host and port of the sync farm.
+## Get Started
+This project has two components:
+* Farm: a https server that listens for sync requests and syncs the runs to wandb.
+* Agent: a python module that you use in your code to request a sync to the farm.
 
-Then, in the code of your job, you need to setup the agent:
-* import the agent: `import sync_agent`
-* After calling `wandb.init(...)`, initialize the agent with: `sync_agent.init()`.
-* After each call to `wandb.log(...)`, call `sync_agent.trigger_sync()` to request a sync to the farm.
+To get started:
+* Install the package: `pip install wandb-offline-sync`
+* Generate a SSL certificate for the sync farm. You can use the command: `openssl req -newkey rsa:4096 -nodes -keyout key.pem -x509 -days 365 -out cert.pem`
+* Run `export SYNC_FARM_USERNAME=<your_username>; export SYNC_FARM_PASSWORD=<your_password>` to set the username and password for the sync farm. You can also put these commands in your `.bashrc` file. Replace `<your_username>` and `<your_password>` with your credentials. If these variables are not set, the farm will use the default credentials `("user", "pass")`
+* Run the farm with the command `wandb_sync_farm` in a node with internet connection. After that, the farm will listen for sync requests. Run `wandb_sync_farm --help` to see all the available options.
+* Run `export SYNC_FARM_HOST=<sync_farm_ip_address_or_hostname>; export SYNC_FARM_PORT=<sync_farm_port>` to set the hostname and port of the sync farm. You can also put these commands in your `.bashrc` file. These variables will be used by the agent.
+
+Then, in the code of your job, to use the agent:
+* import the agent: `from wandb_offline_sync import agent`
+* After calling `wandb.init(...)`, initialize the agent with: `agent.init()`. You can pass a `frequency` argument to set the minimum time between syncs (in seconds). For example, if you set `frequency=60`, the agent will request a sync at most once per minute. The default value for the frequency is 5 minutes.
+* After each call to `wandb.log(...)`, call `agent.trigger_sync()` to request a sync to the farm.
 
 ## Notes
-* Ensure that your job has the environment variables `SYNC_FARM_USERNAME` and `SYNC_FARM_PASSWORD` correctly set.
-* Don't worry if for some minutes your run is not visible from the wandb website. Wait a few minutes and your run will appear. You can always set the `--verbose` option in the sync farm to see what is happening.
+* In the first minutes of the run, it may happen that the sync farm fails in syncing the run to wandb. Don't worry, after some minutes the sync farm should be able to sync the run. You can always set the --verbose option when you run the sync farm to see what is happening.

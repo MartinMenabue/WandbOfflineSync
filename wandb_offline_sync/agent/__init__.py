@@ -1,4 +1,4 @@
-from sync_agent.agent import SyncAgent
+from wandb_offline_sync.agent.wandb_sync_agent import SyncAgent
 
 agent = SyncAgent()
 init = agent.init
