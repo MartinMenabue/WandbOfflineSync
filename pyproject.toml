@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wandb_offline_sync"
-version = "0.0.4"
+version = "0.0.6"
 authors = [
   { name="Martin Menabue", email="martinmnb@live.it" },
 ]

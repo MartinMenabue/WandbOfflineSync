@@ -2,11 +2,12 @@ import requests
 import os
 import wandb
 import time
+import sys
 
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
-HOSTNAME = os.environ.get('SYNC_FARM_HOSTNAME', 'localhost')
-PORT = os.environ.get('SYNC_FARM_PORT', 57891)
+HOSTNAME = os.environ.get('WANDB_SYNC_FARM_HOST', 'localhost')
+PORT = os.environ.get('WANDB_SYNC_FARM_PORT', 57891)
 WANDB_SYNC_FARM_USERNAME = os.environ.get('WANDB_SYNC_FARM_USERNAME', 'user')
 WANDB_SYNC_FARM_PASSWORD = os.environ.get('WANDB_SYNC_FARM_PASSWORD', 'pass')
 
@@ -30,27 +31,28 @@ class SyncAgent:
             }
             self.old_time = time.time()
         except:
-            print('SYNC FARM AGENT - ERROR: wandb is not initialized. Call wandb.init() before initializing the agent')
+            print('SYNC FARM AGENT - ERROR: wandb is not initialized. Call wandb.init() before initializing the agent', file=sys.stderr)
     
     def trigger_sync(self, force=False):
         if not hasattr(self, 'run_id'):
-            print('SYNC FARM AGENT - ERROR: agent is not initialized. Call agent.init() before triggering sync')
+            print('WANDB SYNC FARM AGENT - ERROR: agent is not initialized. Call agent.init() before triggering sync', file=sys.stderr)
             return
         
         if not force and (time.time() - self.old_time) < self.frequency:
-            print('SYNC FARM AGENT - Delay has not passed. Not triggering sync')
+            if self.verbose:
+                print('WANDB SYNC FARM AGENT - Delay has not passed. Not triggering sync')
             return
         
         self.old_time = time.time()
         try:
             if self.verbose:
-                print('SYNC FARM AGENT - Sending sync request')
+                print('WANDB SYNC FARM AGENT - Sending sync request')
             r = requests.post(f'https://{HOSTNAME}:{PORT}/sync', verify=False,
                                 auth=(WANDB_SYNC_FARM_USERNAME, WANDB_SYNC_FARM_PASSWORD),
                                 data=self.data, timeout=self.timeout)
             return r
         except Exception as e:
             if self.verbose:
-                print('SYNC FARM AGENT - ERROR: sync farm not responding')
+                print('WANDB SYNC FARM AGENT - ERROR: sync farm not responding', file=sys.stderr)
                 print(e)
         

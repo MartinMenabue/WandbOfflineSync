@@ -27,13 +27,15 @@ def index():
 @app.route("/sync", methods=['POST'])
 @auth_required
 def sync():
-    if globals()['verbose']:
+    global verbose
+    if verbose:
         print('Received sync request')
     wandb_run_id = request.form['run_id']
     wandb_run_dir = request.form['run_dir']
     wandb_run_dir = wandb_run_dir.removesuffix('/files')
+    global stdout, stderr
     subprocess.Popen(['wandb', 'sync', wandb_run_dir, '--id', wandb_run_id, '--include-offline'],
-                         stderr=globals()['stderr'], stdout=globals()['stdout'])
+                         stderr=stderr, stdout=stdout)
     return '', 200
 
 def main():
@@ -45,9 +47,9 @@ def main():
     parser.add_argument('--verbose', action='store_true', help='Verbose mode')
     args = parser.parse_args()
     global stderr, stdout, verbose
-    stdout = sys.stdout if args.verbose else None
-    stderr = sys.stderr if args.verbose else None
     verbose = args.verbose
+    stdout = sys.stdout if verbose else subprocess.DEVNULL
+    stderr = sys.stderr if verbose else subprocess.DEVNULL
     app.run(ssl_context=(args.cert, args.key), host=args.host, port=args.port)
 
 if __name__ == "__main__":
