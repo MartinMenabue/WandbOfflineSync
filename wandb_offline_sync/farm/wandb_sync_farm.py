@@ -4,7 +4,18 @@ import os
 import subprocess
 import sys
 import argparse
-import base64
+import threading
+import queue
+
+# make a queue of runs to sync
+class SetQueue(queue.Queue):
+    def _init(self, maxsize):
+        self.queue = set()
+    def _put(self, item):
+        self.queue.add(item)
+    def _get(self):
+        return self.queue.pop()
+run_queue = SetQueue()
 
 app = Flask(__name__)
 
@@ -27,16 +38,22 @@ def index():
 @app.route("/sync", methods=['POST'])
 @auth_required
 def sync():
-    global verbose
+    global verbose, run_queue
     if verbose:
         print('Received sync request')
     wandb_run_id = request.form['run_id']
     wandb_run_dir = request.form['run_dir']
     wandb_run_dir = wandb_run_dir.removesuffix('/files')
-    global stdout, stderr
-    subprocess.Popen(['wandb', 'sync', wandb_run_dir, '--id', wandb_run_id, '--include-offline'],
-                         stderr=stderr, stdout=stdout)
+    run_queue.put((wandb_run_id, wandb_run_dir))
     return '', 200
+
+def manage_runs():
+    global run_queue, stderr, stdout
+    while True:
+        if not run_queue.empty():
+            wandb_run_id, wandb_run_dir = run_queue.get()
+            subprocess.run(['wandb', 'sync', wandb_run_dir, '--include-offline', '--id', wandb_run_id], stderr=stderr, stdout=stdout)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -50,7 +67,11 @@ def main():
     verbose = args.verbose
     stdout = sys.stdout if verbose else subprocess.DEVNULL
     stderr = sys.stderr if verbose else subprocess.DEVNULL
-    app.run(ssl_context=(args.cert, args.key), host=args.host, port=args.port)
+    # run flask app in a separate thread
+    threading.Thread(target=app.run, kwargs=dict(ssl_context=(args.cert, args.key), host=args.host, port=args.port)).start()
+    # manage runs in the main thread
+    manage_runs()
+    
 
 if __name__ == "__main__":
     main()
