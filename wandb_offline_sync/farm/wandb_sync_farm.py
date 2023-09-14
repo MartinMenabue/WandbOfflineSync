@@ -6,6 +6,7 @@ import sys
 import argparse
 import threading
 import queue
+from concurrent.futures import ThreadPoolExecutor
 
 # make a queue of runs to sync
 class SetQueue(queue.Queue):
@@ -47,13 +48,21 @@ def sync():
     run_queue.put((wandb_run_id, wandb_run_dir))
     return '', 200
 
-def manage_runs():
+def sync_run(wandb_run_id, wandb_run_dir):
+    global stderr, stdout
+    subprocess.run(['wandb', 'sync', wandb_run_dir, '--include-offline', '--id', wandb_run_id], stderr=stderr, stdout=stdout)
+
+def manage_runs(args):
+    num_threads = args.num_threads
+    executor = ThreadPoolExecutor(max_workers=num_threads)
+    active_threads = set()
     global run_queue, stderr, stdout
     while True:
-        if not run_queue.empty():
+        if not run_queue.empty() and len(active_threads) < num_threads:
             wandb_run_id, wandb_run_dir = run_queue.get()
-            subprocess.run(['wandb', 'sync', wandb_run_dir, '--include-offline', '--id', wandb_run_id], stderr=stderr, stdout=stdout)
-
+            future = executor.submit(sync_run, wandb_run_id, wandb_run_dir)
+            active_threads.add(future)
+            future.add_done_callback(lambda x: active_threads.remove(x))
 
 def main():
     parser = argparse.ArgumentParser()
@@ -62,6 +71,7 @@ def main():
     parser.add_argument('--cert', type=str, default='cert.pem', help='Path to SSL certificate')
     parser.add_argument('--key', type=str, default='key.pem', help='Path to SSL key')
     parser.add_argument('--verbose', action='store_true', help='Verbose mode')
+    parser.add_argument('--num_threads', type=int, default=5, help='Number of threads')
     args = parser.parse_args()
     global stderr, stdout, verbose
     verbose = args.verbose
@@ -70,7 +80,7 @@ def main():
     # run flask app in a separate thread
     threading.Thread(target=app.run, kwargs=dict(ssl_context=(args.cert, args.key), host=args.host, port=args.port)).start()
     # manage runs in the main thread
-    manage_runs()
+    manage_runs(args)
     
 
 if __name__ == "__main__":
