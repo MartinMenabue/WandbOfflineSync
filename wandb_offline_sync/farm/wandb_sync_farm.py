@@ -7,6 +7,7 @@ import argparse
 import threading
 import queue
 from concurrent.futures import ThreadPoolExecutor
+import time
 
 # make a queue of runs to sync
 class SetQueue(queue.Queue):
@@ -16,6 +17,9 @@ class SetQueue(queue.Queue):
         self.queue.add(item)
     def _get(self):
         return self.queue.pop()
+    def get_queue(self):
+        return self.queue
+
 run_queue = SetQueue()
 
 app = Flask(__name__)
@@ -48,19 +52,20 @@ def sync():
     run_queue.put((wandb_run_id, wandb_run_dir))
     return '', 200
 
-def sync_run(wandb_run_id, wandb_run_dir):
-    global stderr, stdout
-    subprocess.run(['wandb', 'sync', wandb_run_dir, '--include-offline', '--id', wandb_run_id], stderr=stderr, stdout=stdout)
+def sync_run(wandb_run_id, wandb_run_dir, stdout, stderr):
+    subprocess.run(['wandb', 'sync', wandb_run_dir, '--include-offline', '--id', wandb_run_id], stdout=stdout, stderr=stderr)
 
-def manage_runs(args):
+def manage_runs(args, run_queue):
     num_threads = args.num_threads
     executor = ThreadPoolExecutor(max_workers=num_threads)
     active_threads = set()
-    global run_queue, stderr, stdout
+    stdout = sys.stdout if args.verbose else subprocess.DEVNULL
+    stderr = sys.stderr if args.verbose else subprocess.DEVNULL
     while True:
+        time.sleep(0.01)
         if not run_queue.empty() and len(active_threads) < num_threads:
             wandb_run_id, wandb_run_dir = run_queue.get()
-            future = executor.submit(sync_run, wandb_run_id, wandb_run_dir)
+            future = executor.submit(sync_run, wandb_run_id, wandb_run_dir, stdout, stderr)
             active_threads.add(future)
             future.add_done_callback(lambda x: active_threads.remove(x))
 
@@ -77,11 +82,10 @@ def main():
     verbose = args.verbose
     stdout = sys.stdout if verbose else subprocess.DEVNULL
     stderr = sys.stderr if verbose else subprocess.DEVNULL
-    # run flask app in a separate thread
-    threading.Thread(target=app.run, kwargs=dict(ssl_context=(args.cert, args.key), host=args.host, port=args.port)).start()
-    # manage runs in the main thread
-    manage_runs(args)
-    
+    # manage run sync in another thread
+    threading.Thread(target=manage_runs, args=(args, run_queue), daemon=True).start()
+    app.run(ssl_context=(args.cert, args.key), host=args.host, port=args.port)
+
 
 if __name__ == "__main__":
     main()
