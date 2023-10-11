@@ -79,19 +79,17 @@ class SyncAgent:
             return
         
         self.old_time = time.time()
-        try:
-            self._request_sync()
-        
-        except Exception as e:
-            if self.verbose:
-                print(f'WANDB SYNC FARM AGENT - ERROR: sync farm (https://{HOSTNAME}:{PORT}) not responding', file=sys.stderr)
-                print(e)
+        self._request_sync()
         
     def _request_sync(self):
         if self.verbose:
             print('WANDB SYNC FARM AGENT - Sending sync request')
-        r = requests.post(f'https://{HOSTNAME}:{PORT}/sync', verify=False,
+        try:
+            r = requests.post(f'https://{HOSTNAME}:{PORT}/sync', verify=False,
                 auth=(WANDB_SYNC_FARM_USERNAME, WANDB_SYNC_FARM_PASSWORD),
                 data=self.data, timeout=self.timeout)
-        return r
+            return r
+        except Exception as e:
+            if self.verbose:
+                print(f'WANDB SYNC FARM AGENT - ERROR: sync farm (https://{HOSTNAME}:{PORT}) not responding', file=sys.stderr)
         
